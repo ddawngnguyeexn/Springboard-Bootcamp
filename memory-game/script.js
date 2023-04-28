@@ -1,4 +1,8 @@
 const gameContainer = document.getElementById("game");
+let card1 = null;
+let card2 = null;
+let cardsFlipped = 0;
+let noClicking = false;
 
 const COLORS = [
   "red",
