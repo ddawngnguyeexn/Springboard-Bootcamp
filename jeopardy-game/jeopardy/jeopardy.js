@@ -20,19 +20,24 @@
 const NUM_MAX_CATEGORIES = 100;
 const NUM_CATEGORIES = 6;
 let categoriesArr = [];
-let clues = {};
+// let clues = {};
+let currentClue = {};
 let chosenIds = [];
+let isDone = false;
 const startBtn = document.getElementById("start");
 const spinElement = document.querySelector("#spin-container");
 const jeopardySec = document.getElementById("jeopardy");
 const cardElement = document.querySelector(".question-card");
+const innerCardElement = document.querySelector(".question-card-inner");
 const categoryText = document.querySelector(".category-text");
 const clueText = document.querySelector(".clue-text");
 const ansText = document.querySelector(".answer-text");
-cardElement.addEventListener("click", (event) => {
+// cardElement.addEventListener("click", (event) => {
+//   handleClick(event);
+// });
+innerCardElement.addEventListener("click", (event) => {
   handleClick(event);
 });
-let currentClue = {};
 
 //Utils -----------------------------------
 /**https://stackoverflow.com/questions/6274339/how-can-i-shuffle-an-array
@@ -57,22 +62,24 @@ function shuffle(a) {
  * Returns array of category ids
  */
 
-function getCategoryIds() {
+async function getCategoryIds() {
   let categoryIds = [];
-  axios
+  await axios
     .get(`https://jservice.io/api/categories?count=${NUM_MAX_CATEGORIES}`)
     .then((response) => {
       const categories = response.data;
       categories.forEach((eCat) => categoryIds.push(eCat.id));
       shuffle(categoryIds);
       chosenIds = categoryIds.slice(0, 6);
-      console.log(chosenIds);
+      // console.log(chosenIds);
       // return categories;
     });
+  // console.log(chosenIds);
+  // console.log("I am done!");
 }
 
-function fetchDataCategories(arrId) {
-  // const categories = arrId.map(category_id =>{
+async function fetchDataCategories(arrId) {
+    // const categories = arrId.map(category_id =>{
   //         return new Promise((resolve, reject) => {
   //            fetch(`https://jservice.io/api/category?id=${category_id}`)
   //               .then(response => response.json()).then(data => {
@@ -81,12 +88,12 @@ function fetchDataCategories(arrId) {
   //               });
 
   // });
-  const categories = arrId.map((category_id) => {
+  const categories = await arrId.map((category_id) => {
     return axios
       .get(`https://jservice.io/api/category?id=${category_id}`)
       .then((response) => response.data);
   });
-  Promise.all(categories).then((results) => {
+  await Promise.all(categories).then((results) => {
     results.forEach((result) => {
       let category = {
         title: result.title,
@@ -99,7 +106,7 @@ function fetchDataCategories(arrId) {
           category.clues.push({
             question: clue.question,
             answer: clue.answer,
-            showing: null,
+            shown: false,
           });
         });
       // console.log(clues);
@@ -108,38 +115,58 @@ function fetchDataCategories(arrId) {
       // console.log('catArr',categoriesArr);
     });
   });
+  // console.log(categoriesArr);
+  // console.log("I am done");
 }
 
 function renderClue() {
   cardElement.classList.remove("showing-answer");
   cardElement.classList.add("showing-question");
   // currentClue = {title:categoriesArr[0].title, clue:categoriesArr[0].clues[0]}
-  console.log(currentClue);
+  // console.log("currentclue",currentClue);
   // currentClue.clue.showing = "question";
-  categoryText.textContent = currentClue.title;
-  clueText.textContent = currentClue.clue.question;
+  categoryText.textContent = currentClue.title.toUpperCase();
+  clueText.textContent = currentClue.clue.question.toUpperCase();
 }
 function revealAnswer() {
-  ansText.textContent = currentClue.clue.answer;
+  ansText.textContent = currentClue.clue.answer.toUpperCase();
   cardElement.classList.add("showing-answer");
   cardElement.classList.remove("showing-question");
 }
+// function getFirstClue(){
+//   console.log("catArr",categoriesArr);
+//   categoriesArr.forEach(c => console.log(c));
+//   console.log(categoriesArr[0]);
+//   currentClue.title = categoriesArr[0].title;
+//   currentClue.clue = categoriesArr[0].clues[0];
+//   categoriesArr[0].clues[0].shown = true;
+// }
 function pullNextClue() {
   let returnedClue = {};
   // while( categoriesArr.find(c=>c.clues.forEach(clue=>clue.showing!=="shown")))
   let foundClue = categoriesArr.find((c) =>
     c.clues.find((clue) => {
-      if (clue.showing !== "shown") {
-        console.log(clue.showing);
-        console.log(clue);
-        clue.showing = "shown";
+      if (!clue.shown) {
+        // console.log(clue.shown);
+        // console.log(clue);
+        clue.shown = true;
         returnedClue.clue = clue;
         return clue;
       }
     })
   );
-  returnedClue.title = foundClue.title;
-  return returnedClue;
+  // let foundClue = categoriesArr.find((c) =>
+  // c.clues.find((clue) => !clue.shown)
+    
+  // console.log("pull clue ran");
+  // console.log("foundclue",foundClue);
+  if (foundClue){
+    returnedClue.title = foundClue.title;
+  // console.log('foundclue',foundClue);
+  // console.log('returnClue',returnedClue);
+    return returnedClue;
+  }
+  else return null;  
 }
 
 /** Handle clicking on a clue: show the question or answer.
@@ -151,16 +178,22 @@ function pullNextClue() {
  * */
 
 function handleClick(evt) {
-  if (evt.target.parentNode.classList.contains("showing-question")) {
+  if (evt.target.parentNode.classList.contains("showing-question")) 
+  {
+    console.log(evt.target);
     revealAnswer();
-  } else if (evt.target.parentNode.classList.contains("showing-answer")) {
-    if (pullNextClue()) {
-      currentClue = pullNextClue();
+  } 
+  else if (evt.target.parentNode.classList.contains("showing-answer")) 
+  {
+    let nextClue = pullNextClue();
+    if (nextClue) {
+      currentClue = nextClue;
       renderClue();
       ansText.textContent = "";
     } else {
       console.log("No More Question");
       alert("No More Question");
+      isDone = true;
     }
   }
 }
@@ -170,14 +203,14 @@ function handleClick(evt) {
  */
 
 function showLoadingView() {
-    spinElement.classList.remnove("invisible");
+    // spinElement.classList.remnove("invisible");
     cardElement.classList.remove("visible");
 }
 
 /** Remove the loading spinner and update the button used to fetch data. */
 
 function hideLoadingView() {
-    spinElement.classList.add("invisible");
+    // spinElement.classList.add("invisible");
     cardElement.classList.add("visible");
 }
 
@@ -188,25 +221,38 @@ function hideLoadingView() {
  * - create HTML table
  * */
 
-function setupAndStart() {
+async function setupAndStart() {
+  // console.log("I ran");
+  await getCategoryIds();
+  // console.log("step 1 done.");
+  await fetchDataCategories(chosenIds);
+  // console.log("step 2 done.");
   hideLoadingView();    
+  // getFirstClue();
   currentClue = pullNextClue();
+  // console.log("currentclue",currentClue);
+  // console.log("foundCluerun");
   renderClue();
+
+}
+function restart(){
+  categoriesArr = [];
+  chosenIds = [];
+  ansText.textContent = "";
 }
 
 /** On click of start / restart button, set up game. */
-startBtn.addEventListener("click", (event) => {
+startBtn.addEventListener("click", async function(event) {
+  restart();
   setupAndStart();
-  console.log("I was clicked");
+  // console.log(categoriesArr);
+  // console.log("I was clicked");
+  // console.log("currentclue",currentClue);
+  startBtn.textContent ="Restart";
+  hideLoadingView();
 });
 // TODO
 
-/** On page load, add event handler for clicking clues */
-// jeopardySec.addEventListener("click",handleClick);
-// TODO
-getCategoryIds();
-
-setTimeout(fetchDataCategories(chosenIds),3000);
 
 //JUNK
 
@@ -323,8 +369,8 @@ async function getCategory(catId) {
   });
   return { title: res.data.title, clues: clueArray };
 }
-const catObj = getCategory(150);
-console.log(catObj);
+// const catObj = getCategory(150);
+// console.log(catObj);
 // const res = new Promise((resolve, reject)=>{fetch(`https://jservice.io/api/categories?count=${NUM_MAX_CATEGORIES}`).then(response => response.json()).then(data=>{resolve(data);});});
 // const res = new Promise((resolve, reject)=>{fetch(`https://jservice.io/api/categories?count=${NUM_MAX_CATEGORIES}`).then(response => response.json())});
 // console.log(res);
