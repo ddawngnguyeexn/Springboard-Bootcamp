@@ -21,9 +21,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: white solid 10px;
+  width: 95%;
 }
 .question-card-inner{
-  padding:250px;
+  padding: 75px 25px;
 }
 .question-card.visible{
   opacity: 1;
